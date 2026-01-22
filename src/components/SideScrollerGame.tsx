@@ -13,11 +13,29 @@ interface GameState {
   cameraX: number;
 }
 
-const GROUND_Y = 75;
-const JUMP_FORCE = -18;
-const GRAVITY = 0.8;
-const MOVE_SPEED = 6;
-const WORLD_WIDTH = 4000;
+interface Landmark {
+  id: string;
+  x: number;
+  image: string;
+  width: number;
+  height: number;
+}
+
+const GROUND_Y = 72;
+const JUMP_FORCE = -20;
+const GRAVITY = 0.9;
+const MOVE_SPEED = 7;
+const WORLD_WIDTH = 8000;
+
+// Toronto landmarks placed at specific positions
+const landmarks: Landmark[] = [
+  { id: "cn-tower", x: 800, image: "/game/toronto/landmarks/cn-tower.jpg", width: 200, height: 400 },
+  { id: "streetcar", x: 1800, image: "/game/toronto/landmarks/streetcar.jpg", width: 300, height: 150 },
+  { id: "city-hall", x: 3000, image: "/game/toronto/landmarks/city-hall.jpg", width: 400, height: 250 },
+  { id: "toronto-sign", x: 4200, image: "/game/toronto/landmarks/toronto-sign.jpg", width: 350, height: 120 },
+  { id: "rogers-centre", x: 5500, image: "/game/toronto/landmarks/rogers-centre.jpg", width: 450, height: 200 },
+  { id: "raccoon", x: 6800, image: "/game/toronto/landmarks/raccoon.jpg", width: 150, height: 150 },
+];
 
 export function SideScrollerGame() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,52 +121,102 @@ export function SideScrollerGame() {
 
   const { playerX, playerY, isJumping, isRunning, facingRight, cameraX } = gameState;
 
+  // Determine which character sprite to show
+  const getCharacterSprite = () => {
+    if (isJumping) return "/game/toronto/character/jump.jpg";
+    if (isRunning) return "/game/toronto/character/run.jpg";
+    return "/game/toronto/character/idle.jpg";
+  };
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen overflow-hidden cursor-pointer outline-none bg-gradient-to-b from-purple-900 to-orange-600"
+      className="relative w-full h-screen overflow-hidden cursor-pointer outline-none"
       tabIndex={0}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       onClick={() => containerRef.current?.focus()}
     >
+      {/* Instructions overlay */}
       {!isFocused && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="text-center text-white">
-            <h1 className="text-4xl font-bold mb-4">Game Builder</h1>
-            <p className="text-xl mb-2">Click to Play</p>
-            <p className="text-sm opacity-70">Arrow keys or WASD to move, Space to jump</p>
+            <h1 className="text-5xl font-bold mb-2">Toronto Runner</h1>
+            <p className="text-xl mb-4 opacity-80">A side-scrolling adventure</p>
+            <div className="bg-white/10 rounded-2xl px-8 py-4 inline-block">
+              <p className="text-lg mb-2">Click to Play</p>
+              <p className="text-sm opacity-70">Arrow keys or WASD to move • Space to jump</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Parallax Layer 1 - Mountains (slowest) */}
+      {/* Layer 1 - Sky (slowest) */}
       <div
-        className="absolute inset-0 w-[400%] h-full"
+        className="absolute inset-0 w-[500%] h-full"
         style={{
-          backgroundImage: "url(/game/bg-mountains.jpg)",
+          backgroundImage: "url(/game/toronto/bg/sky.jpg)",
           backgroundSize: "auto 100%",
           backgroundRepeat: "repeat-x",
-          transform: `translateX(${-cameraX * 0.15}px)`,
+          transform: `translateX(${-cameraX * 0.05}px)`,
         }}
       />
 
-      {/* Parallax Layer 2 - City (medium) */}
+      {/* Layer 2 - Far city (slow) */}
       <div
-        className="absolute inset-0 w-[400%] h-full"
+        className="absolute inset-0 w-[500%] h-full"
         style={{
-          backgroundImage: "url(/game/bg-city.jpg)",
+          backgroundImage: "url(/game/toronto/bg/far-city.jpg)",
           backgroundSize: "auto 100%",
           backgroundRepeat: "repeat-x",
-          transform: `translateX(${-cameraX * 0.4}px)`,
+          transform: `translateX(${-cameraX * 0.2}px)`,
         }}
       />
 
-      {/* Parallax Layer 3 - Ground (fastest) */}
+      {/* Layer 3 - Mid urban (medium) */}
       <div
-        className="absolute bottom-0 w-[400%] h-[35%]"
+        className="absolute inset-0 w-[500%] h-full"
         style={{
-          backgroundImage: "url(/game/bg-ground.jpg)",
+          backgroundImage: "url(/game/toronto/bg/mid-urban.jpg)",
+          backgroundSize: "auto 100%",
+          backgroundRepeat: "repeat-x",
+          transform: `translateX(${-cameraX * 0.5}px)`,
+        }}
+      />
+
+      {/* Landmarks (placed at specific X positions, move with ground) */}
+      {landmarks.map((landmark) => {
+        const screenX = landmark.x - cameraX;
+        const containerWidth = containerRef.current?.offsetWidth || 800;
+
+        // Only render if visible on screen
+        if (screenX < -landmark.width || screenX > containerWidth + 100) return null;
+
+        return (
+          <div
+            key={landmark.id}
+            className="absolute"
+            style={{
+              left: screenX,
+              bottom: "28%",
+              width: landmark.width,
+              height: landmark.height,
+            }}
+          >
+            <img
+              src={landmark.image}
+              alt={landmark.id}
+              className="w-full h-full object-contain"
+            />
+          </div>
+        );
+      })}
+
+      {/* Layer 4 - Ground (fastest, matches player) */}
+      <div
+        className="absolute bottom-0 w-[500%] h-[30%]"
+        style={{
+          backgroundImage: "url(/game/toronto/bg/ground.jpg)",
           backgroundSize: "auto 100%",
           backgroundRepeat: "repeat-x",
           transform: `translateX(${-cameraX}px)`,
@@ -157,7 +225,7 @@ export function SideScrollerGame() {
 
       {/* Player */}
       <motion.div
-        className="absolute w-20 h-20 md:w-28 md:h-28"
+        className="absolute w-24 h-32 md:w-32 md:h-44"
         style={{
           left: playerX - cameraX,
           top: `${playerY}%`,
@@ -165,40 +233,46 @@ export function SideScrollerGame() {
           translateY: "-100%",
         }}
       >
-        {/* Simple pixel art character */}
-        <div className="w-full h-full relative">
-          <motion.div
-            className="w-full h-full bg-blue-500 rounded-lg shadow-lg flex items-center justify-center"
-            animate={
-              isJumping
-                ? { scaleY: [1, 0.8, 1.2, 1], rotate: [0, -5, 5, 0] }
-                : isRunning
-                ? { y: [0, -4, 0], scaleX: [1, 1.05, 1] }
-                : { y: 0 }
-            }
-            transition={
-              isJumping
-                ? { duration: 0.4 }
-                : { duration: 0.25, repeat: Infinity, ease: "easeInOut" }
-            }
-          >
-            <span className="text-3xl">🏃</span>
-          </motion.div>
-        </div>
+        <motion.img
+          src={getCharacterSprite()}
+          alt="Player"
+          className="w-full h-full object-contain drop-shadow-2xl"
+          animate={
+            isJumping
+              ? { scale: [1, 1.1, 1] }
+              : isRunning
+              ? { y: [0, -3, 0] }
+              : { y: 0 }
+          }
+          transition={
+            isJumping
+              ? { duration: 0.3 }
+              : { duration: 0.2, repeat: Infinity, ease: "easeInOut" }
+          }
+        />
       </motion.div>
 
       {/* HUD */}
       {isFocused && (
-        <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-2 rounded-lg">
-          <div>Position: {Math.round(playerX)}</div>
-          <div>World: {WORLD_WIDTH}px</div>
-        </div>
-      )}
+        <>
+          <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-4 py-2 rounded-xl backdrop-blur-sm">
+            <div className="font-bold text-lg">Toronto Runner</div>
+            <div className="opacity-70">Distance: {Math.round(playerX)}m</div>
+            <div className="opacity-70">World: {WORLD_WIDTH}m</div>
+          </div>
 
-      {isFocused && (
-        <div className="absolute top-4 right-4 px-3 py-1 bg-black/50 rounded-full text-white text-xs">
-          ESC or click outside to pause
-        </div>
+          <div className="absolute top-4 right-4 px-4 py-2 bg-black/50 rounded-xl text-white text-sm backdrop-blur-sm">
+            Click outside to pause
+          </div>
+
+          {/* Progress bar */}
+          <div className="absolute bottom-4 left-4 right-4 h-2 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
+            <div
+              className="h-full bg-white/80 rounded-full transition-all"
+              style={{ width: `${(playerX / WORLD_WIDTH) * 100}%` }}
+            />
+          </div>
+        </>
       )}
     </div>
   );
